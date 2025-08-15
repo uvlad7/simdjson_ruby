@@ -17,6 +17,7 @@ end
 
 SIMDJSON_SINGLEHEADER_DIR = File.join(__dir__, 'vendor', 'simdjson', 'singleheader')
 task compile: :before_compile
+task build: :before_compile
 task :before_compile do
   puts 'Copy singleheader files to ext/simdjson...'
   FileUtils.cp([
