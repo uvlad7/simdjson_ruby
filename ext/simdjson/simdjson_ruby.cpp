@@ -66,11 +66,30 @@ static VALUE rb_simdjson_parse(VALUE self, VALUE arg) {
     return Qnil;
 }
 
+static VALUE rb_simdjson_dig(VALUE self, VALUE arg) {
+    Check_Type(arg, T_STRING);
+
+    ondemand::parser parser;
+    padded_string str(RSTRING_PTR(arg), RSTRING_LEN(arg));
+    ondemand::document doc = parser.iterate(str);
+    // ondemand API doesn't have type-blind dom::element analogs
+    double value;
+    auto error = doc["str"]["123"]["abc"].get(value);
+
+    if (error == SUCCESS) {
+        return DBL2NUM(double(value));
+    }
+    // TODO better error handling
+    rb_raise(rb_eSimdjsonParseError, "parse error");
+    return Qnil;
+}
+
 extern "C" {
 
 void Init_simdjson(void) {
     rb_mSimdjson = rb_define_module("Simdjson");
     rb_eSimdjsonParseError = rb_define_class_under(rb_mSimdjson, "ParseError", rb_eStandardError);
     rb_define_module_function(rb_mSimdjson, "parse", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_parse), 1);
+    rb_define_module_function(rb_mSimdjson, "dig", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig), 1);
 }
 }
