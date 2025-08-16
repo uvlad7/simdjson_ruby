@@ -46,3 +46,11 @@ $ clang-format -style=file -i ext/simdjson/*
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Development
+
+    $ git clone git@github.com:uvlad7/simdjson_ruby.git --recurse-submodules
+
+or
+
+    $ git clone git@github.com:uvlad7/simdjson_ruby.git && git submodule update --init --recursive --depth 1
