@@ -2,11 +2,11 @@
 #include <string>
 #include <string_view>
 
-// #define snprintf ruby_snprintf
-// causes std::snprintf to fail
-#define RUBY_SUBST_H 1
-#include "ruby.h"
 #include "simdjson.h"
+
+extern "C" {
+#include "ruby.h"
+}
 
 VALUE rb_mSimdjson;
 
