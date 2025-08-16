@@ -68,9 +68,9 @@ static VALUE rb_simdjson_parse(VALUE self, VALUE arg) {
 
 static inline VALUE to_ruby(double value) { return DBL2NUM(value); }
 
-static inline VALUE to_ruby(std::string_view value) {
-    return rb_str_new(value.data(), value.size());
-}
+static inline VALUE to_ruby(std::string_view value) { return rb_str_new(value.data(), value.size()); }
+
+static inline VALUE to_ruby(int64_t value) { return LONG2NUM(value); }
 
 template <typename T>
 static VALUE rb_simdjson_dig(VALUE self, VALUE arg) {
@@ -80,9 +80,10 @@ static VALUE rb_simdjson_dig(VALUE self, VALUE arg) {
     padded_string str(RSTRING_PTR(arg), RSTRING_LEN(arg));
     ondemand::document doc = parser.iterate(str);
     // ondemand API doesn't have type-blind dom::element analogs
-    // You first declare the variable of the appropriate type (double, uint64_t, int64_t, bool, ondemand::object and ondemand::array)
+    // You first declare the variable of the appropriate type (double, uint64_t, int64_t, bool, ondemand::object and
+    // ondemand::array)
     T value;
-    auto error = doc["str"]["123"]["abc"].get(value);
+    auto error = doc["data"]["search"]["searchResult"]["paginationV2"]["maxPage"].get(value);
 
     if (error == SUCCESS) {
         return to_ruby(value);
@@ -99,6 +100,8 @@ void Init_simdjson(void) {
     rb_eSimdjsonParseError = rb_define_class_under(rb_mSimdjson, "ParseError", rb_eStandardError);
     rb_define_module_function(rb_mSimdjson, "parse", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_parse), 1);
     rb_define_module_function(rb_mSimdjson, "dig_double", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<double>), 1);
-    rb_define_module_function(rb_mSimdjson, "dig_string", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<std::string_view>), 1);
+    rb_define_module_function(rb_mSimdjson, "dig_string",
+                              reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<std::string_view>), 1);
+    rb_define_module_function(rb_mSimdjson, "dig_int", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<int64_t>), 1);
 }
 }
