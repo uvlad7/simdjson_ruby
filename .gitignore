@@ -11,7 +11,3 @@
 *.o
 *.a
 mkmf.log
-
-# from vendor submodule
-ext/simdjson/simdjson.h
-ext/simdjson/simdjson.cpp
