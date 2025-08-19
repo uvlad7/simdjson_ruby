@@ -14,18 +14,7 @@ Rake::TestTask.new(:test) do |t|
   t.libs << 'lib'
   t.test_files = FileList['test/**/*_test.rb']
 end
-
-SIMDJSON_SINGLEHEADER_DIR = File.join(__dir__, 'vendor', 'simdjson', 'singleheader')
-task compile: :before_compile
-task build: :before_compile
-task :before_compile do
-  puts 'Copy singleheader files to ext/simdjson...'
-  FileUtils.cp([
-                 "#{SIMDJSON_SINGLEHEADER_DIR}/simdjson.h",
-                 "#{SIMDJSON_SINGLEHEADER_DIR}//simdjson.cpp"
-               ],
-               'ext/simdjson')
-end
+task test: :compile
 
 Rake::ExtensionTask.new('simdjson') do |ext|
   ext.lib_dir = 'lib/simdjson'

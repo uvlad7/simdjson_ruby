@@ -1,4 +1,6 @@
 
+#include <cxxabi.h>
+
 #include <string>
 #include <string_view>
 
@@ -14,9 +16,40 @@ VALUE rb_eSimdjsonParseError;
 
 using namespace simdjson;
 
+std::string demangle(const char* mangled) {
+    int status;
+    std::unique_ptr<char[], void (*)(void*)> result(abi::__cxa_demangle(mangled, 0, 0, &status), std::free);
+    if (status != 0 || !result.get()) {
+        return std::string("unable to demangle the name");
+    }
+    // probably memory leak
+    // need to return pointer and force it to be freed before raise
+    return std::string(result.get());
+}
+
+template <auto Func, typename... Args>
+static VALUE rb_guard(Args&&... args) {
+    try {
+        if constexpr (std::is_same_v<decltype(Func(std::forward<Args>(args)...)), void>) {
+            Func(std::forward<Args>(args)...);
+            return Qnil;
+        } else {
+            return to_ruby(Func(std::forward<Args>(args)...));
+        }
+    } catch (std::exception& e) {
+        rb_raise(rb_eRuntimeError, "%s (%s)", e.what(), demangle(typeid(e).name()).c_str());
+        return Qnil;
+    } catch (...) {
+        rb_raise(rb_eRuntimeError, "Unknown exception (%s)",
+                 demangle(abi::__cxa_current_exception_type()->name()).c_str());
+        return Qnil;
+    }
+}
+
 // Convert tape to Ruby's Object
 static VALUE make_ruby_object(dom::element element) {
     auto t = element.type();
+    throw std::runtime_error("parse error");
     if (t == dom::element_type::ARRAY) {
         VALUE ary = rb_ary_new();
         for (dom::element x : element) {
@@ -59,7 +92,11 @@ static VALUE rb_simdjson_parse(VALUE self, VALUE arg) {
     dom::element doc;
     auto error = parser.parse(str).get(doc);
     if (error == SUCCESS) {
-        return make_ruby_object(doc);
+        try {
+            return make_ruby_object(doc);
+        } catch (std::exception const& e) {
+            rb_raise(rb_eException, "%s (%s)", e.what(), typeid(e).name());
+        }
     }
     // TODO better error handling
     rb_raise(rb_eSimdjsonParseError, "parse error");
@@ -93,6 +130,11 @@ static VALUE rb_simdjson_dig(VALUE self, VALUE arg) {
     return Qnil;
 }
 
+static void testme() { throw std::string("testme"); }
+
+static void testme2() { throw std::runtime_error("testme2"); }
+static void testme3() { throw 42; }
+
 extern "C" {
 
 void Init_simdjson(void) {
@@ -103,5 +145,8 @@ void Init_simdjson(void) {
     rb_define_module_function(rb_mSimdjson, "dig_string",
                               reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<std::string_view>), 1);
     rb_define_module_function(rb_mSimdjson, "dig_int", reinterpret_cast<VALUE (*)(...)>(rb_simdjson_dig<int64_t>), 1);
+    rb_define_module_function(rb_mSimdjson, "testme", reinterpret_cast<VALUE (*)(...)>(rb_guard<testme>), 0);
+    rb_define_module_function(rb_mSimdjson, "testme2", reinterpret_cast<VALUE (*)(...)>(rb_guard<testme2>), 0);
+    rb_define_module_function(rb_mSimdjson, "testme3", reinterpret_cast<VALUE (*)(...)>(rb_guard<testme3>), 0);
 }
 }
